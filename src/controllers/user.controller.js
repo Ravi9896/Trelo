@@ -208,7 +208,7 @@ const refreshAccessToken = asyncHandler(async (req, res)=>{
  .cookie("refreshToken",newrefreshToken,options)
  .json(
    new ApiResponse(200, 
-     {accessToken,newrefreshToken},
+     {accessToken,refreshToken:newrefreshToken},
      "access token refreshed successfully"
    )
  )
