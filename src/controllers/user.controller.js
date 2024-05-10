@@ -69,7 +69,7 @@ const registerUser = asyncHandler(async (req, res) => {
   //check for avatar
   if (!avatar) throw new ApiError(401, "avatar file is required2");
 
-  //create user object and  create entry in db
+  //create user objectan d  create entry in db
   const user = await User.create({
     fullName,
     avatar: avatar.url,
@@ -160,8 +160,8 @@ const loggedOutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
@@ -246,15 +246,16 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { fullName, email } = req.body;
-  if (!fullName && email) {
+  if (!(fullName || email)) {
     throw new ApiError(401, "all fields must be provided");
   }
+
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-        fullName,
-        email,
+        fullName:fullName,
+        email:email,
       },
     },
     { new: true }
@@ -382,9 +383,9 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
            $cond: {
              if: {
                $in: [req.user?._id, "$subscribers.subscriber"],
-               then: true,
-               else: true,
              },
+             then: true,
+             else: true,
            },
          },
        },
@@ -395,13 +396,14 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
          username: 1,
          subscribersCount: 1,
          chanelSubscribersTo: 1,
-         isSubscribed:1,
-         avatar:1,
-         coverImage:1,
-         email:1
+         isSubscribed: 1,
+         avatar: 1,
+         coverImage: 1,
+         email: 1,
        },
      },
-   ])
+   ]);
+
    if(!channel?.length){
     throw new ApiError(404,"channel does not exist ")
    }
@@ -421,33 +423,34 @@ const user = await User.aggregate([
     $lookup: {
       from: "videos",
       localField: "watchHistory",
-      foreignField:"_id",
-      as:"watchHistory",
-      pipeline:[
+      foreignField: "_id",
+      as: "watchHistory",
+      pipeline: [
         {
-          $lookup:{
-            from:"users",
-            localField:"creator",
-            foreignField:"_id",
-            as:"creator",
-            pipeline:[
+          $lookup: {
+            from: "users",
+            localField: "creator",
+            foreignField: "_id",
+            as: "creator",
+            pipeline: [
               {
-                $project:{
-                  fullName:1,
-                  username:1,
-                  avatar:1 ,
-                }
-              }
-            ]
-          }
-        },{
-          $addFields:{
-            watchHistory:{
-              $first:"$watchHistory"
-            }
-          }
-        }
-      ]
+                $project: {
+                  fullName: 1,
+                  username: 1,
+                  avatar: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $addFields: {
+            watchHistory: {
+              $first: "$watchHistory",
+            },
+          },
+        },
+      ],
     },
   },
 ]);
