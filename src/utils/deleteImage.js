@@ -8,18 +8,18 @@ cloudinary.config({
 });
 
 
-const deleteOnCloudinary = async (localFilePath) => {
+const deleteOnCloudinary = async (publicId) => {
+  console.log("12",publicId);
   try {
-    if (!localFilePath) return null;
-    //delete the file on cloudinary
-    await cloudinary.uploader.destroy(localFilePath, {
-      resource_type: "auto",
+    if (!publicId) return null;
+    // Delete the file on Cloudinary
+    await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
     });
-    
   } catch (error) {
-throw new ApiError(401, "faild to  delete the cloudinary image")
+    // Throw an ApiError if deletion fails
+    throw new ApiError(401, error.message,"Failed to delete the Cloudinary image");
   }
 };
-
 
 export default deleteOnCloudinary;

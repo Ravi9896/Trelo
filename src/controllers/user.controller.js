@@ -266,6 +266,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "account details updated successfully"));
 });
 const updateUserAvatar = asyncHandler(async (req, res) => {
+
   const avatarLocalPath = req.file?.path;
   if (!avatarLocalPath) {
     throw new ApiError(401, "avatar is not available");
@@ -277,15 +278,28 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   }
 
   //delete the old  avatar
-  const deleteOldimage= await User.findById(req.user.avatar);
-  if (!deleteOldimage) {
-    throw new ApiError(401, "can't find the old avatar url ")
+
+function extractPublicId(cloudinaryUrl) {
+  // Example Cloudinary URL format: https://res.cloudinary.com/demo/image/upload/sample.jpg
+  // Extracting the public ID from the URL
+  const startIndex = cloudinaryUrl.lastIndexOf("/") + 1;
+  const endIndex = cloudinaryUrl.lastIndexOf(".");
+  const publicId = cloudinaryUrl.substring(startIndex, endIndex);
+  return publicId;
+}
+
+  const cloudinaryUrl = await req.user.avatar;
+  const publicId = extractPublicId(cloudinaryUrl);
+console.log(publicId);
+  // console.log(cludinaryUrl);
+
+  if (!publicId) {
+    throw new ApiError(401, "can't find the old avatar url ");
   }
-  try {
-    await deleteOnCloudinary(deleteOldimage)
-  } catch (error) {
-    throw new ApiError(401, "can't delete the old avatar")
-  }
+ 
+
+ await deleteOnCloudinary(publicId);
+
 
 
 
@@ -308,28 +322,45 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       "avatar updated successfully"
     )
   )
+  // return res.status(200).json(200,"delete successful")
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
   if (!coverImageLocalPath) {
-    throw new ApiError(401, "avatar is not available");
+    throw new ApiError(401, "cover image is not available");
   }
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
   if (!coverImage) {
-    throw new ApiError(401, "error while uploading avatar");
+    throw new ApiError(401, "error while uploading cover image");
   }
 
 
-  const deleteOldimage = await User.findById(req.user.avatar);
-  if (!deleteOldimage) {
-    throw new ApiError(401, "can't find the old cover url ");
-  }
-  try {
-    await deleteOnCloudinary(deleteOldimage);
-  } catch (error) {
-    throw new ApiError(401, "can't delete the old cover");
-  }
+
+function extractPublicId(cloudinaryUrl) {
+  // Example Cloudinary URL format: https://res.cloudinary.com/demo/image/upload/sample.jpg
+  // Extracting the public ID from the URL
+  const startIndex = cloudinaryUrl.lastIndexOf("/") + 1;
+  const endIndex = cloudinaryUrl.lastIndexOf(".");
+  const publicId = cloudinaryUrl.substring(startIndex, endIndex);
+  return publicId;
+}
+
+const cloudinaryUrl = await req.user.coverImage;
+const publicId = extractPublicId(cloudinaryUrl);
+console.log(publicId);
+// console.log(cludinaryUrl);
+
+if (!publicId) {
+  throw new ApiError(401, "can't find the old coverImage publicId");
+}
+
+await deleteOnCloudinary(publicId);
+
+
+
+
+
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -345,17 +376,21 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, user, "coverImage updated successfully"));
 });
+
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const {username} = req.params
 
   if(!username?.trim()) throw new ApiError(401, "username is required")
+
+    
+  
    const channel = await User.aggregate([
      {
        $match: {
          username: username?.toLowerCase(),
        },
-     },
-     {
+      },
+      {
        $lookup: {
          from: "subscriptions",
          localField: "_id",
@@ -385,7 +420,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                $in: [req.user?._id, "$subscribers.subscriber"],
              },
              then: true,
-             else: true,
+             else: false,
            },
          },
        },
